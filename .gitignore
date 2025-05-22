@@ -1,23 +1,26 @@
 # Mac OS
 .DS_Store
 
-# Node.js
-node_modules
-
-# intellij files
+# PyCharm files
 .idea/
 
 # VSCode files
 .vscode/
 
-# Jekyll Website
-_site/
+# Coverage output
+.coverage
+.coverage.*
+*-junit.xml
+*-codecov.xml
 
-# build output
+# Environments
+.venv
+
+# Python-generated files
+__pycache__/
+*.py[oc]
 build/
-
-# coverage output
-/coverage/
-
-# log files
-/logs/
+dist/
+wheels/
+*.egg-info
+/__pycache__

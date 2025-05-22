@@ -11,5 +11,5 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 | Maintainer           | GitHub ID                                                    | Affiliation |
 | -------------------- | ------------------------------------------------------------ | ----------- |
 | Rithin Pullela       | [rithin-pullela-aws](https://github.com/rithin-pullela-aws)  | Amazon      |
-| Yaliang WU           | [ylwu-amzn](https://github.com/ylwu-amzn)                    | Amazon      |
+| Yaliang Wu           | [ylwu-amzn](https://github.com/ylwu-amzn)                    | Amazon      |
 | Nathalie Jonathan    | [nathaliellenaa](https://github.com/nathaliellenaa)          | Amazon      |
