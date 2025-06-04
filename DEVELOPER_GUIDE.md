@@ -50,7 +50,7 @@ uv lock
 uv sync
 ```
 
-## Claude Desktop Integration (Development)
+## Sample MCP config file for development:
 ```
 {
     "mcpServers": {
