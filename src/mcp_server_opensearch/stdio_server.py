@@ -5,6 +5,10 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 from tools.tools import TOOL_REGISTRY
+from mcp_server_opensearch.common import is_tool_compatible
+from opensearch.helper import get_opensearch_version
+import os
+
 
 # --- Server setup ---
 async def serve() -> None:
@@ -13,12 +17,17 @@ async def serve() -> None:
     @server.list_tools()
     async def list_tools() -> list[Tool]:
         tools = []
+        opensearch_url = os.getenv("OPENSEARCH_URL", "")
+        version = get_opensearch_version(opensearch_url)
         for tool_name, tool_info in TOOL_REGISTRY.items():
-            tools.append(Tool(
-                name=tool_name,
-                description=tool_info["description"],
-                inputSchema=tool_info["input_schema"]
-            ))
+            if is_tool_compatible(version, tool_info):
+                tools.append(
+                    Tool(
+                        name=tool_name,
+                        description=tool_info["description"],
+                        inputSchema=tool_info["input_schema"],
+                    )
+                )
         return tools
 
     @server.call_tool()

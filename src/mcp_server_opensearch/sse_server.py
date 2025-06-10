@@ -3,6 +3,7 @@
 
 import argparse
 
+from mcp_server_opensearch.common import is_tool_compatible
 import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -12,6 +13,10 @@ from mcp.server.sse import SseServerTransport
 from mcp.server import Server
 from mcp.types import TextContent, Tool
 from tools.tools import TOOL_REGISTRY
+from opensearch.helper import get_opensearch_version
+
+import os
+
 
 def create_mcp_server() -> Server:
     server = Server("opensearch-mcp-server")
@@ -19,12 +24,17 @@ def create_mcp_server() -> Server:
     @server.list_tools()
     async def list_tools() -> list[Tool]:
         tools = []
+        opensearch_url = os.getenv("OPENSEARCH_URL", "")
+        version = get_opensearch_version(opensearch_url)
         for tool_name, tool_info in TOOL_REGISTRY.items():
-            tools.append(Tool(
-                name=tool_name,
-                description=tool_info["description"],
-                inputSchema=tool_info["input_schema"]
-            ))
+            if is_tool_compatible(version, tool_info):
+                tools.append(
+                    Tool(
+                        name=tool_name,
+                        description=tool_info["description"],
+                        inputSchema=tool_info["input_schema"],
+                    )
+                )
         return tools
 
     @server.call_tool()
@@ -37,6 +47,7 @@ def create_mcp_server() -> Server:
 
     return server
 
+
 class MCPStarletteApp:
     def __init__(self, mcp_server: Server):
         self.mcp_server = mcp_server
@@ -44,9 +55,9 @@ class MCPStarletteApp:
 
     async def handle_sse(self, request: Request) -> None:
         async with self.sse.connect_sse(
-                request.scope,
-                request.receive,
-                request._send,
+            request.scope,
+            request.receive,
+            request._send,
         ) as (read_stream, write_stream):
             await self.mcp_server.run(
                 read_stream,
@@ -69,11 +80,12 @@ class MCPStarletteApp:
             ]
         )
 
+
 async def serve(host: str = "0.0.0.0", port: int = 9900) -> None:
     mcp_server = create_mcp_server()
     app_handler = MCPStarletteApp(mcp_server)
     app = app_handler.create_app()
-    
+
     config = uvicorn.Config(
         app=app,
         host=host,
@@ -82,11 +94,13 @@ async def serve(host: str = "0.0.0.0", port: int = 9900) -> None:
     server = uvicorn.Server(config)
     await server.serve()
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run OpenSearch MCP SSE-based server')
-    parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
-    parser.add_argument('--port', type=int, default=9900, help='Port to listen on')
+    parser = argparse.ArgumentParser(description="Run OpenSearch MCP SSE-based server")
+    parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=9900, help="Port to listen on")
     args = parser.parse_args()
 
     import asyncio
+
     asyncio.run(serve(host=args.host, port=args.port))

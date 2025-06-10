@@ -107,6 +107,8 @@ TOOL_REGISTRY = {
         "input_schema": ListIndicesArgs.model_json_schema(),
         "function": list_indices_tool,
         "args_model": ListIndicesArgs,
+        "min_version": "1.0.0",
+        "max_version": "2.20",
     },
     "IndexMappingTool": {
         "description": "Retrieves index mapping and setting information for an index in OpenSearch",
