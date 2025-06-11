@@ -1,6 +1,6 @@
 import pytest
 from semver import Version
-from mcp_server_opensearch.common import is_tool_compatible
+from tools.common import is_tool_compatible
 
 
 class TestIsToolCompatible:
