@@ -13,6 +13,7 @@ class TestOpenSearchHelper:
             list_indices,
             get_index_mapping,
             search_index,
+            aggregation_search,
             get_shards,
         )
 
@@ -20,6 +21,7 @@ class TestOpenSearchHelper:
         self.list_indices = list_indices
         self.get_index_mapping = get_index_mapping
         self.search_index = search_index
+        self.aggregation_search = aggregation_search
         self.get_shards = get_shards
 
     @patch("opensearch.helper.initialize_client")
@@ -172,6 +174,104 @@ class TestOpenSearchHelper:
                 "https://test-opensearch-domain.com", "test-index", {"invalid": "query"}
             )
         assert str(exc_info.value) == "Invalid query"
+
+    @patch("opensearch.helper.initialize_client")
+    def test_aggregation_search(self, mock_initialize_client):
+        """Test aggregation_search function"""
+        # Setup mock response
+        mock_response = {
+            "aggregations": {
+                "price_stats": {
+                    "count": 1000,
+                    "min": 10.0,
+                    "max": 1000.0,
+                    "avg": 250.5,
+                    "sum": 250500.0,
+                }
+            },
+            "hits": {"total": {"value": 1000}},
+        }
+        mock_client = mock_initialize_client.return_value
+        mock_client.search.return_value = mock_response
+
+        # Setup test query
+        test_query = {"aggs": {"price_stats": {"stats": {"field": "price"}}}}
+
+        # Execute
+        result = self.aggregation_search(
+            "https://test-opensearch-domain.com", "test-index", test_query
+        )
+
+        # Assert
+        assert result == mock_response
+        mock_initialize_client.assert_called_once_with(
+            "https://test-opensearch-domain.com"
+        )
+
+        # Verify that size=0 was automatically added to the query
+        expected_query = test_query.copy()
+        expected_query["size"] = 0
+        mock_client.search.assert_called_once_with(
+            index="test-index", body=expected_query
+        )
+
+    @patch("opensearch.helper.initialize_client")
+    def test_aggregation_search_with_existing_size(self, mock_initialize_client):
+        """Test aggregation_search function when query already has size parameter"""
+        # Setup mock response
+        mock_response = {
+            "aggregations": {
+                "category_terms": {
+                    "buckets": [
+                        {"key": "electronics", "doc_count": 500},
+                        {"key": "clothing", "doc_count": 300},
+                    ]
+                }
+            },
+            "hits": {"total": {"value": 800}},
+        }
+        mock_client = mock_initialize_client.return_value
+        mock_client.search.return_value = mock_response
+
+        # Setup test query with existing size parameter
+        test_query = {
+            "size": 10,
+            "aggs": {"category_terms": {"terms": {"field": "category"}}},
+        }
+
+        # Execute
+        result = self.aggregation_search(
+            "https://test-opensearch-domain.com", "test-index", test_query
+        )
+
+        # Assert
+        assert result == mock_response
+        mock_initialize_client.assert_called_once_with(
+            "https://test-opensearch-domain.com"
+        )
+
+        # Verify that size was overridden to 0
+        expected_query = test_query.copy()
+        expected_query["size"] = 0
+        mock_client.search.assert_called_once_with(
+            index="test-index", body=expected_query
+        )
+
+    @patch("opensearch.helper.initialize_client")
+    def test_aggregation_search_error(self, mock_initialize_client):
+        """Test aggregation_search error handling"""
+        # Setup mock to raise exception
+        mock_client = mock_initialize_client.return_value
+        mock_client.search.side_effect = Exception("Invalid aggregation query")
+
+        # Execute and assert
+        with pytest.raises(Exception) as exc_info:
+            self.aggregation_search(
+                "https://test-opensearch-domain.com",
+                "test-index",
+                {"aggs": {"invalid": "aggregation"}},
+            )
+        assert str(exc_info.value) == "Invalid aggregation query"
 
     @patch("opensearch.helper.initialize_client")
     def test_get_shards_error(self, mock_initialize_client):

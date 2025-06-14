@@ -2,7 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pydantic import BaseModel
-from opensearch.helper import list_indices, get_index_mapping, search_index, get_shards
+from opensearch.helper import (
+    list_indices,
+    get_index_mapping,
+    search_index,
+    get_shards,
+    aggregation_search,
+)
 from typing import Any
 import json
 import os
@@ -18,6 +24,12 @@ class GetIndexMappingArgs(BaseModel):
 
 
 class SearchIndexArgs(BaseModel):
+    index: str
+    query: Any
+    opensearch_url: str = os.getenv("OPENSEARCH_URL", "")
+
+
+class AggregationArgs(BaseModel):
     index: str
     query: Any
     opensearch_url: str = os.getenv("OPENSEARCH_URL", "")
@@ -66,6 +78,23 @@ async def search_index_tool(args: SearchIndexArgs) -> list[dict]:
         return [{"type": "text", "text": f"Error searching index: {str(e)}"}]
 
 
+async def aggregation_tool(args: AggregationArgs) -> list[dict]:
+    try:
+        result = aggregation_search(args.opensearch_url, args.index, args.query)
+
+        # Extract aggregation results from response
+        aggregations = result.get("aggregations")
+        return_msg = f"Aggregation results from {args.index}:\n{json.dumps(aggregations, indent=2)}"
+        if not aggregations:
+            return_msg = (
+                f"No aggregation results found for index '{args.index}'. "
+                "Please verify your aggregation query contains valid 'aggs' or 'aggregations' field."
+            )
+    except Exception as e:
+        return_msg = f"Error executing aggregation query: {str(e)}"
+    return [{"type": "text", "text": return_msg}]
+
+
 async def get_shards_tool(args: GetShardsArgs) -> list[dict]:
     try:
         result = get_shards(args.opensearch_url, args.index)
@@ -111,6 +140,17 @@ TOOL_REGISTRY = {
         "input_schema": SearchIndexArgs.model_json_schema(),
         "function": search_index_tool,
         "args_model": SearchIndexArgs,
+    },
+    "AggregationTool": {
+        "description": """Executes aggregation queries (like count, sum, average, min, max, histogram, etc.) 
+        against an index in OpenSearch. This tool is specifically designed to return only the aggregation results, 
+        not the matching document contents. 
+        Ideal for questions requiring statistical summaries, totals, or time-based buckets, 
+        especially when working with large data sets.
+        Use this instead of returning matching documents when only aggregate insights are needed.""",
+        "input_schema": AggregationArgs.model_json_schema(),
+        "function": aggregation_tool,
+        "args_model": AggregationArgs,
     },
     "GetShardsTool": {
         "description": "Gets information about shards in OpenSearch",
