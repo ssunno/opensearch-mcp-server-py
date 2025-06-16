@@ -173,7 +173,11 @@ class TestTools():
         assert result[0]['type'] == 'text'
         assert 'Search results from test-index' in result[0]['text']
         assert json.loads(result[0]['text'].split('\n', 1)[1]) == mock_results
-        self.mock_search.assert_called_once_with(self.test_url, "test-index", {"match_all": {}})
+        self.mock_search.assert_called_once_with(
+            self.test_url,
+            "test-index",
+            {"query": {"match_all": {}}},
+        )
     
     @pytest.mark.asyncio
     async def test_search_index_tool_error(self):
@@ -192,7 +196,11 @@ class TestTools():
         assert len(result) == 1
         assert result[0]['type'] == 'text'
         assert 'Error searching index: Test error' in result[0]['text']
-        self.mock_search.assert_called_once_with(self.test_url, "test-index", {"match_all": {}})
+        self.mock_search.assert_called_once_with(
+            self.test_url,
+            "test-index",
+            {"query": {"match_all": {}}},
+        )
 
     @pytest.mark.asyncio
     async def test_get_shards_tool(self):
@@ -262,6 +270,14 @@ class TestTools():
 
         # Test valid inputs
         assert self.GetIndexMappingArgs(opensearch_url=self.test_url, index="test").index == "test"
-        assert self.SearchIndexArgs(opensearch_url=self.test_url, index="test", query={"match": {}}).index == "test"
+        assert (
+            self.SearchIndexArgs(
+                opensearch_url=self.test_url,
+                index="test",
+                query={"match": {}},
+                **{"from": 1},
+            ).from_
+            == 1
+        )
         assert self.GetShardsArgs(opensearch_url=self.test_url, index="test").index == "test"
         assert isinstance(self.ListIndicesArgs(opensearch_url=self.test_url), self.ListIndicesArgs)
