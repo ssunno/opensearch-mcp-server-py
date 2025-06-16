@@ -28,10 +28,21 @@ pip install opensearch-mcp-server-py
 ## Available tools
 - ListIndexTool: Lists all indices in OpenSearch.
 - IndexMappingTool: Retrieves index mapping and setting information for an index in OpenSearch.
-- SearchIndexTool: Searches an index using a query written in query domain-specific language (DSL) in OpenSearch.
+- SearchIndexTool: Searches an index using a query written in query DSL and supports optional ``size``, ``from``, ``sort``, and ``aggs`` parameters.
 - GetShardsTool: Gets information about shards in OpenSearch.
 
 > More tools coming soon. [Click here](DEVELOPER_GUIDE.md#contributing)
+
+### SearchIndexTool parameters
+
+The search request body supports common OpenSearch options:
+
+- **index** – name of the index to search.
+- **query** – query DSL describing which documents to match.
+- **size** – maximum number of hits to return (defaults to 10 if not provided).
+- **from** – starting offset for hits (useful for pagination).
+- **sort** – sorting criteria for the results.
+- **aggs** – aggregations to compute over matched documents.
 
 ## User Guide
 For detailed usage instructions, configuration options, and examples, please see the [User Guide](USER_GUIDE.md).

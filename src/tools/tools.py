@@ -1,27 +1,19 @@
 # Copyright OpenSearch Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-from pydantic import BaseModel
-from opensearch.helper import list_indices, get_index_mapping, search_index, get_shards
-from typing import Any
+from opensearch.helper import (
+    list_indices,
+    get_index_mapping,
+    search_index,
+    get_shards,
+)
+from .args import (
+    ListIndicesArgs,
+    GetIndexMappingArgs,
+    SearchIndexArgs,
+    GetShardsArgs,
+)
 import json
-import os
-
-class ListIndicesArgs(BaseModel):
-    opensearch_url: str = os.getenv("OPENSEARCH_URL", "")
-
-class GetIndexMappingArgs(BaseModel):
-    index: str
-    opensearch_url: str = os.getenv("OPENSEARCH_URL", "")
-
-class SearchIndexArgs(BaseModel):
-    index: str
-    query: Any
-    opensearch_url: str = os.getenv("OPENSEARCH_URL", "")
-
-class GetShardsArgs(BaseModel):
-    index: str
-    opensearch_url: str = os.getenv("OPENSEARCH_URL", "")
 
 async def list_indices_tool(args: ListIndicesArgs) -> list[dict]:
     try:
@@ -56,7 +48,21 @@ async def get_index_mapping_tool(args: GetIndexMappingArgs) -> list[dict]:
 
 async def search_index_tool(args: SearchIndexArgs) -> list[dict]:
     try:
-        result = search_index(args.opensearch_url, args.index, args.query)
+        body = {"query": args.query}
+
+        if args.size is not None:
+            body["size"] = args.size
+
+        if args.from_ is not None:
+            body["from"] = args.from_
+
+        if args.sort is not None:
+            body["sort"] = args.sort
+
+        if args.aggs is not None:
+            body["aggs"] = args.aggs
+
+        result = search_index(args.opensearch_url, args.index, body)
         formatted_result = json.dumps(result, indent=2)
         
         return [{
