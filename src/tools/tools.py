@@ -1,7 +1,7 @@
 # Copyright OpenSearch Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from opensearch.helper import (
     list_indices,
     get_index_mapping,
@@ -30,9 +30,31 @@ class SearchIndexArgs(BaseModel):
 
 
 class AggregationArgs(BaseModel):
-    index: str
-    query: Any
-    opensearch_url: str = os.getenv("OPENSEARCH_URL", "")
+    """
+    Arguments for executing aggregation queries on an OpenSearch index.
+    """
+
+    index: str = Field(
+        ..., description="Name of the OpenSearch index to run the aggregation query on."
+    )
+    aggs: dict[str, Any] = Field(
+        ...,
+        description=(
+            "Aggregations to compute, keyed by name. Common types: avg, sum, min, max, terms, histogram. "
+            'You can nest aggregations. Example: {"avg_price": {"avg": {"field": "price"}}}'
+            "This field is required."
+        ),
+    )
+    query: dict[str, Any] = Field(
+        default_factory=lambda: {"match_all": {}},
+        description=(
+            "Query DSL to filter documents before aggregation. Defaults to match all documents. "
+            'Example: {"range": {"price": {"gte": 100}}}'
+        ),
+    )
+    opensearch_url: str = Field(
+        default=os.getenv("OPENSEARCH_URL", ""), description="OpenSearch cluster URL."
+    )
 
 
 class GetShardsArgs(BaseModel):
@@ -80,7 +102,11 @@ async def search_index_tool(args: SearchIndexArgs) -> list[dict]:
 
 async def aggregation_tool(args: AggregationArgs) -> list[dict]:
     try:
-        result = aggregation_search(args.opensearch_url, args.index, args.query)
+        # Build the OpenSearch aggregation query body
+        body = {"aggs": args.aggs}
+        if args.query:
+            body["query"] = args.query
+        result = aggregation_search(args.opensearch_url, args.index, body)
 
         # Extract aggregation results from response
         aggregations = result.get("aggregations")
@@ -142,12 +168,11 @@ TOOL_REGISTRY = {
         "args_model": SearchIndexArgs,
     },
     "AggregationTool": {
-        "description": """Executes aggregation queries (like count, sum, average, min, max, histogram, etc.) 
-        against an index in OpenSearch. This tool is specifically designed to return only the aggregation results, 
-        not the matching document contents. 
-        Ideal for questions requiring statistical summaries, totals, or time-based buckets, 
-        especially when working with large data sets.
-        Use this instead of returning matching documents when only aggregate insights are needed.""",
+        "description": (
+            "Executes aggregation queries (such as count, sum, avg, min, max, histogram) on an OpenSearch index. "
+            "This tool returns only the aggregation results, not the matching documents. "
+            "Ideal for questions that require aggregate insights rather than document details. "
+        ),
         "input_schema": AggregationArgs.model_json_schema(),
         "function": aggregation_tool,
         "args_model": AggregationArgs,
