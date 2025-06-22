@@ -29,10 +29,8 @@ def search_index(opensearch_url: str, index: str, query: Any) -> json:
 
 def aggregation_search(opensearch_url: str, index: str, query: Any) -> json:
     """
-    Execute aggregation queries on OpenSearch index.
-
-    This function is specifically designed for aggregation queries.
-    It automatically sets size=0 to return only aggregation results without documents.
+    Execute optimized aggregation queries on OpenSearch index.
+    This function is specifically designed for high-performance aggregation queries.
 
     Args:
         opensearch_url (str): The URL of the OpenSearch cluster
@@ -40,16 +38,33 @@ def aggregation_search(opensearch_url: str, index: str, query: Any) -> json:
         query (Any): The aggregation query (should contain 'aggs' field)
 
     Returns:
-        json: The aggregation results from OpenSearch
+        json: The optimized aggregation results from OpenSearch
     """
     client = initialize_client(opensearch_url)
 
-    # Ensure size is 0 for aggregation-only queries
+    # Ensure query is a dictionary for manipulation
     if isinstance(query, dict):
-        query = query.copy()
-        query["size"] = 0
+        optimized_query = query.copy()
+    else:
+        optimized_query = query
 
-    response = client.search(index=index, body=query)
+        # Apply essential aggregation optimizations
+    if isinstance(optimized_query, dict):
+        # Core performance optimizations
+        optimized_query["size"] = 0  # No document results needed
+        optimized_query["_source"] = False  # Reduce memory usage
+        optimized_query["track_total_hits"] = False
+        optimized_query["timeout"] = "30s"  # Prevent long-running queries
+
+    # Execute with performance optimizations
+    search_params = {
+        "index": index,
+        "body": optimized_query,
+        "request_cache": True,
+        "allow_partial_search_results": False,
+    }
+
+    response = client.search(**search_params)
     return response
 
 

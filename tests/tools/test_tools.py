@@ -224,7 +224,7 @@ class TestTools:
             self.AggregationArgs(
                 opensearch_url=self.test_url,
                 index="test-index",
-                query={"aggs": {"price_stats": {"stats": {"field": "price"}}}},
+                aggs={"price_stats": {"stats": {"field": "price"}}},
             )
         )
 
@@ -241,7 +241,10 @@ class TestTools:
         self.mock_aggregation.assert_called_once_with(
             self.test_url,
             "test-index",
-            {"aggs": {"price_stats": {"stats": {"field": "price"}}}},
+            {
+                "aggs": {"price_stats": {"stats": {"field": "price"}}},
+                "query": {"match_all": {}},
+            },
         )
 
     @pytest.mark.asyncio
@@ -256,7 +259,7 @@ class TestTools:
             self.AggregationArgs(
                 opensearch_url=self.test_url,
                 index="test-index",
-                query={"aggs": {"my_agg": {"terms": {"field": "category"}}}},
+                aggs={"my_agg": {"terms": {"field": "category"}}},
             )
         )
 
@@ -273,7 +276,10 @@ class TestTools:
         self.mock_aggregation.assert_called_once_with(
             self.test_url,
             "test-index",
-            {"aggs": {"my_agg": {"terms": {"field": "category"}}}},
+            {
+                "aggs": {"my_agg": {"terms": {"field": "category"}}},
+                "query": {"match_all": {}},
+            },
         )
 
     @pytest.mark.asyncio
@@ -287,7 +293,7 @@ class TestTools:
             self.AggregationArgs(
                 opensearch_url=self.test_url,
                 index="test-index",
-                query={"aggs": {"count_agg": {"value_count": {"field": "id"}}}},
+                aggs={"count_agg": {"value_count": {"field": "id"}}},
             )
         )
 
@@ -301,7 +307,10 @@ class TestTools:
         self.mock_aggregation.assert_called_once_with(
             self.test_url,
             "test-index",
-            {"aggs": {"count_agg": {"value_count": {"field": "id"}}}},
+            {
+                "aggs": {"count_agg": {"value_count": {"field": "id"}}},
+                "query": {"match_all": {}},
+            },
         )
 
     @pytest.mark.asyncio
@@ -389,7 +398,7 @@ class TestTools:
         with pytest.raises(ValueError):
             self.AggregationArgs(
                 opensearch_url=self.test_url, index="test"
-            )  # Should fail without query
+            )  # Should fail without aggs
 
         # Test valid inputs
         assert (
@@ -404,7 +413,9 @@ class TestTools:
         )
         assert (
             self.AggregationArgs(
-                opensearch_url=self.test_url, index="test", query={"aggs": {}}
+                opensearch_url=self.test_url,
+                index="test",
+                aggs={"avg_field": {"avg": {"field": "value"}}},
             ).index
             == "test"
         )

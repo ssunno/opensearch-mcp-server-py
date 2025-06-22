@@ -208,11 +208,18 @@ class TestOpenSearchHelper:
             "https://test-opensearch-domain.com"
         )
 
-        # Verify that size=0 was automatically added to the query
+        # Verify that optimizations were applied to the query
         expected_query = test_query.copy()
         expected_query["size"] = 0
+        expected_query["_source"] = False
+        expected_query["track_total_hits"] = False
+        expected_query["timeout"] = "30s"
+
         mock_client.search.assert_called_once_with(
-            index="test-index", body=expected_query
+            index="test-index",
+            body=expected_query,
+            request_cache=True,
+            allow_partial_search_results=False,
         )
 
     @patch("opensearch.helper.initialize_client")
@@ -250,11 +257,18 @@ class TestOpenSearchHelper:
             "https://test-opensearch-domain.com"
         )
 
-        # Verify that size was overridden to 0
+        # Verify that size was overridden to 0 and optimizations were applied
         expected_query = test_query.copy()
         expected_query["size"] = 0
+        expected_query["_source"] = False
+        expected_query["track_total_hits"] = False
+        expected_query["timeout"] = "30s"
+
         mock_client.search.assert_called_once_with(
-            index="test-index", body=expected_query
+            index="test-index",
+            body=expected_query,
+            request_cache=True,
+            allow_partial_search_results=False,
         )
 
     @patch("opensearch.helper.initialize_client")
