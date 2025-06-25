@@ -1,34 +1,36 @@
 # Copyright OpenSearch Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-import argparse
-import os
 import logging
 import uvicorn
+from mcp.server import Server
+from mcp.server.sse import SseServerTransport
+from mcp.types import TextContent, Tool
+from mcp_server_opensearch.clusters_information import load_clusters_from_yaml
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.routing import Mount, Route
 from starlette.responses import Response
-from mcp.server.sse import SseServerTransport
-from mcp.server import Server
-from mcp.types import TextContent, Tool
-from tools.common import get_enabled_tools
-from opensearch.helper import get_opensearch_version
+from starlette.routing import Mount, Route
+from tools.tool_filter import get_tools
 from tools.tool_generator import generate_tools_from_openapi
-from opensearch.client import initialize_client
 
-async def create_mcp_server() -> Server:
-    server = Server("opensearch-mcp-server")
-    opensearch_url = os.getenv("OPENSEARCH_URL", "https://localhost:9200")
 
+async def create_mcp_server(mode: str = 'single', profile: str = '', config: str = '') -> Server:
+    # Set the global profile if provided
+    if profile:
+        from opensearch.client import set_profile
+
+        set_profile(profile)
+
+    # Load clusters from YAML file
+    if mode == 'multi':
+        load_clusters_from_yaml(config)
+
+    server = Server('opensearch-mcp-server')
     # Call tool generator
-    await generate_tools_from_openapi(initialize_client(opensearch_url))
-
-    # Filter all tools by version
-    version = get_opensearch_version(opensearch_url)
-    enabled_tools = get_enabled_tools(version)
-    logging.info(f"Connected OpenSearch version: {version}")
-    logging.info(f"Enabled tools: {list(enabled_tools.keys())}")
+    await generate_tools_from_openapi()
+    enabled_tools = get_tools(mode)
+    logging.info(f'Enabled tools: {list(enabled_tools.keys())}')
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
@@ -37,8 +39,8 @@ async def create_mcp_server() -> Server:
             tools.append(
                 Tool(
                     name=tool_name,
-                    description=tool_info["description"],
-                    inputSchema=tool_info["input_schema"],
+                    description=tool_info['description'],
+                    inputSchema=tool_info['input_schema'],
                 )
             )
         return tools
@@ -47,9 +49,9 @@ async def create_mcp_server() -> Server:
     async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         tool = enabled_tools.get(name)
         if not tool:
-            raise ValueError(f"Unknown or disabled tool: {name}")
-        parsed = tool["args_model"](**arguments)
-        return await tool["function"](parsed)
+            raise ValueError(f'Unknown or disabled tool: {name}')
+        parsed = tool['args_model'](**arguments)
+        return await tool['function'](parsed)
 
     return server
 
@@ -57,7 +59,7 @@ async def create_mcp_server() -> Server:
 class MCPStarletteApp:
     def __init__(self, mcp_server: Server):
         self.mcp_server = mcp_server
-        self.sse = SseServerTransport("/messages/")
+        self.sse = SseServerTransport('/messages/')
 
     async def handle_sse(self, request: Request) -> None:
         async with self.sse.connect_sse(
@@ -75,20 +77,26 @@ class MCPStarletteApp:
         return Response()
 
     async def handle_health(self, request: Request) -> Response:
-        return Response("OK", status_code=200)
+        return Response('OK', status_code=200)
 
     def create_app(self) -> Starlette:
         return Starlette(
             routes=[
-                Route("/sse", endpoint=self.handle_sse, methods=["GET"]),
-                Route("/health", endpoint=self.handle_health, methods=["GET"]),
-                Mount("/messages/", app=self.sse.handle_post_message),
+                Route('/sse', endpoint=self.handle_sse, methods=['GET']),
+                Route('/health', endpoint=self.handle_health, methods=['GET']),
+                Mount('/messages/', app=self.sse.handle_post_message),
             ]
         )
 
 
-async def serve(host: str = "0.0.0.0", port: int = 9900) -> None:
-    mcp_server = await create_mcp_server()
+async def serve(
+    host: str = '0.0.0.0',
+    port: int = 9900,
+    mode: str = 'single',
+    profile: str = '',
+    config: str = '',
+) -> None:
+    mcp_server = await create_mcp_server(mode, profile, config)
     app_handler = MCPStarletteApp(mcp_server)
     app = app_handler.create_app()
 
@@ -99,14 +107,3 @@ async def serve(host: str = "0.0.0.0", port: int = 9900) -> None:
     )
     server = uvicorn.Server(config)
     await server.serve()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run OpenSearch MCP SSE-based server")
-    parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=9900, help="Port to listen on")
-    args = parser.parse_args()
-
-    import asyncio
-
-    asyncio.run(serve(host=args.host, port=args.port))
