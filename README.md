@@ -26,7 +26,7 @@ pip install opensearch-mcp-server-py
 ```
 
 ## Available Tools
-- [ListIndexTool](https://docs.opensearch.org/docs/latest/api-reference/cat/cat-indices/): Lists all indices in OpenSearch.
+- [ListIndexTool](https://docs.opensearch.org/docs/latest/api-reference/cat/cat-indices/): Lists all indices in OpenSearch with full information including docs.count, docs.deleted, store.size, etc. If an index parameter is provided, returns detailed information about that specific index.
 - [IndexMappingTool](https://docs.opensearch.org/docs/latest/ml-commons-plugin/agents-tools/tools/index-mapping-tool/): Retrieves index mapping and setting information for an index in OpenSearch.
 - [SearchIndexTool](https://docs.opensearch.org/docs/latest/ml-commons-plugin/agents-tools/tools/search-index-tool/): Searches an index using a query written in query domain-specific language (DSL) in OpenSearch.
 - [GetShardsTool](https://docs.opensearch.org/docs/latest/api-reference/cat/cat-shards/): Gets information about shards in OpenSearch.
@@ -38,6 +38,7 @@ pip install opensearch-mcp-server-py
 ### Tool Parameters
 - **ListIndexTool**
     - `opensearch_url` (optional): The OpenSearch cluster URL to connect to
+    - `index` (optional): The name of the index to get detailed information for. If provided, returns detailed information about this specific index instead of listing all indices.
 
 - **IndexMappingTool**
     - `opensearch_url` (optional): The OpenSearch cluster URL to connect to

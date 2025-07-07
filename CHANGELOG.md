@@ -5,6 +5,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- Extend list indices tool ([#68](https://github.com/opensearch-project/opensearch-mcp-server-py/pull/68))
 
 ### Removed
 

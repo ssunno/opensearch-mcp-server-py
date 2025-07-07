@@ -16,6 +16,22 @@ def list_indices(args: ListIndicesArgs) -> json:
     return response
 
 
+def get_index(args: ListIndicesArgs) -> json:
+    """Get detailed information about a specific index.
+
+    Args:
+        args: ListIndicesArgs containing the index name
+
+    Returns:
+        json: Detailed index information including settings and mappings
+    """
+    from .client import initialize_client
+
+    client = initialize_client(args)
+    response = client.indices.get(index=args.index)
+    return response
+
+
 def get_index_mapping(args: GetIndexMappingArgs) -> json:
     from .client import initialize_client
 

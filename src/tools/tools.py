@@ -11,6 +11,7 @@ from .tool_params import (
 )
 from .utils import is_tool_compatible
 from opensearch.helper import (
+    get_index,
     get_index_mapping,
     get_opensearch_version,
     get_shards,
@@ -35,11 +36,19 @@ def check_tool_compatibility(tool_name: str, args: baseToolArgs = None):
 async def list_indices_tool(args: ListIndicesArgs) -> list[dict]:
     try:
         check_tool_compatibility('ListIndexTool', args)
+
+        # If index is provided, get detailed information for that specific index
+        if args.index:
+            index_info = get_index(args)
+            formatted_info = json.dumps(index_info, indent=2)
+            return [{'type': 'text', 'text': f'Index information for {args.index}:\n{formatted_info}'}]
+
+        # Otherwise, list all indices with full information
         indices = list_indices(args)
-        indices_text = '\n'.join(index['index'] for index in indices)
+        formatted_indices = json.dumps(indices, indent=2)
 
         # Return in MCP expected format
-        return [{'type': 'text', 'text': indices_text}]
+        return [{'type': 'text', 'text': f'All indices information:\n{formatted_indices}'}]
     except Exception as e:
         return [{'type': 'text', 'text': f'Error listing indices: {str(e)}'}]
 
@@ -99,7 +108,7 @@ async def get_shards_tool(args: GetShardsArgs) -> list[dict]:
 # Registry of available OpenSearch tools with their metadata
 TOOL_REGISTRY = {
     'ListIndexTool': {
-        'description': 'Lists all indices in the OpenSearch cluster',
+        'description': 'Lists all indices in the OpenSearch cluster with full information including docs.count, docs.deleted, store.size, etc. If an index parameter is provided, returns detailed information about that specific index.',
         'input_schema': ListIndicesArgs.model_json_schema(),
         'function': list_indices_tool,
         'args_model': ListIndicesArgs,

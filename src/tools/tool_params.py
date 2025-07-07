@@ -14,7 +14,7 @@ class baseToolArgs(BaseModel):
 
 
 class ListIndicesArgs(baseToolArgs):
-    pass
+    index: str = Field(default=None, description='The name of the index to get detailed information for. If provided, returns detailed information about this specific index instead of listing all indices.')
 
 
 class GetIndexMappingArgs(baseToolArgs):
