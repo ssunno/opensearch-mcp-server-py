@@ -12,20 +12,17 @@ from unittest.mock import Mock, patch
 
 
 class TestOpenSearchClient:
-    def setup_method(self):
-        """Setup that runs before each test method."""
-        # Clear any existing environment variables
-        self.original_env = {}
-        for key in ['OPENSEARCH_USERNAME', 'OPENSEARCH_PASSWORD', 'AWS_REGION', 'OPENSEARCH_URL']:
-            if key in os.environ:
-                self.original_env[key] = os.environ[key]
-                del os.environ[key]
-
-    def teardown_method(self):
-        """Cleanup after each test method."""
-        # Restore original environment variables
-        for key, value in self.original_env.items():
-            os.environ[key] = value
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self, monkeypatch):
+        """Set up a consistent environment for all tests in this class."""
+        self.monkeypatch = monkeypatch
+        self.monkeypatch.setenv('OPENSEARCH_SSL_VERIFY', 'true')
+        self.monkeypatch.delenv('OPENSEARCH_USERNAME', raising=False)
+        self.monkeypatch.delenv('OPENSEARCH_PASSWORD', raising=False)
+        self.monkeypatch.delenv('AWS_REGION', raising=False)
+        self.monkeypatch.delenv('OPENSEARCH_URL', raising=False)
+        yield  # This part is where the test runs
+        # Teardown is handled automatically by monkeypatch
 
     def test_initialize_client_empty_url(self):
         """Test that initialize_client raises ValueError when opensearch_url is empty."""
@@ -41,9 +38,9 @@ class TestOpenSearchClient:
     def test_initialize_client_basic_auth(self, mock_opensearch):
         """Test client initialization with basic authentication."""
         # Set environment variables
-        os.environ['OPENSEARCH_USERNAME'] = 'test-user'
-        os.environ['OPENSEARCH_PASSWORD'] = 'test-password'
-        os.environ['OPENSEARCH_URL'] = 'https://test-opensearch-domain.com'
+        self.monkeypatch.setenv('OPENSEARCH_USERNAME', 'test-user')
+        self.monkeypatch.setenv('OPENSEARCH_PASSWORD', 'test-password')
+        self.monkeypatch.setenv('OPENSEARCH_URL', 'https://test-opensearch-domain.com')
 
         # Mock OpenSearch client
         mock_client = Mock()
@@ -67,8 +64,8 @@ class TestOpenSearchClient:
     def test_initialize_client_aws_auth(self, mock_session, mock_opensearch):
         """Test client initialization with AWS IAM authentication."""
         # Set environment variables
-        os.environ['AWS_REGION'] = 'us-west-2'
-        os.environ['OPENSEARCH_URL'] = 'https://test-opensearch-domain.com'
+        self.monkeypatch.setenv('AWS_REGION', 'us-west-2')
+        self.monkeypatch.setenv('OPENSEARCH_URL', 'https://test-opensearch-domain.com')
 
         # Mock AWS credentials
         mock_credentials = Mock()
@@ -102,8 +99,8 @@ class TestOpenSearchClient:
     def test_initialize_client_aws_auth_error(self, mock_session, mock_opensearch):
         """Test client initialization when AWS authentication fails."""
         # Set environment variables
-        os.environ['AWS_REGION'] = 'us-west-2'
-        os.environ['OPENSEARCH_URL'] = 'https://test-opensearch-domain.com'
+        self.monkeypatch.setenv('AWS_REGION', 'us-west-2')
+        self.monkeypatch.setenv('OPENSEARCH_URL', 'https://test-opensearch-domain.com')
 
         # Mock AWS session to raise an error
         mock_session_instance = Mock()
@@ -124,7 +121,7 @@ class TestOpenSearchClient:
     def test_initialize_client_no_auth(self, mock_session, mock_opensearch):
         """Test client initialization when no authentication is available."""
         # Set environment variable
-        os.environ['OPENSEARCH_URL'] = 'https://test-opensearch-domain.com'
+        self.monkeypatch.setenv('OPENSEARCH_URL', 'https://test-opensearch-domain.com')
 
         # Mock AWS session to return no credentials
         mock_session_instance = Mock()
